@@ -17,14 +17,35 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   List<Widget> pageList = [];
 
+  static const String prefSelectedIndexKey = 'selectedIndex';
+
   @override
   void initState() {
     super.initState();
+    getCurrentIndex();
     pageList.add(const RecipeList());
+  }
+
+  void saveCurrentIndex() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setInt(prefSelectedIndexKey, _selectedIndex);
+  }
+
+  void getCurrentIndex() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey(prefSelectedIndexKey)) {
+      setState(() {
+        final index = prefs.getInt(prefSelectedIndexKey);
+        if (index != null) {
+          _selectedIndex = index;
+        }
+      });
+    }
   }
 
   void _onItemTapped(int index) {
     setState(() {
+      saveCurrentIndex();
       _selectedIndex = index;
     });
   }
