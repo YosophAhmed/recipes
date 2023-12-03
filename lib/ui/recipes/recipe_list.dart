@@ -1,9 +1,15 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/custom_dropdown.dart';
 import '../colors.dart';
+
+import 'dart:convert';
+import '../../network/recipe_model.dart';
+import '../widgets/recipe_card.dart';
+import '../../ui/recipes/recipe_details.dart';
 
 class RecipeList extends StatefulWidget {
   const RecipeList({super.key});
@@ -26,6 +32,15 @@ class _RecipeListState extends State<RecipeList> {
 
   static const String prefSearchKey = 'previousSearches';
   List<String> previousSearches = <String>[];
+
+  APIRecipeQuery? _apiRecipeQuery;
+
+  Future loadRecipes() async {
+    final jsonString = await rootBundle.loadString('assets/recipes1.json');
+    setState(() {
+      _apiRecipeQuery = APIRecipeQuery.fromJson(jsonDecode(jsonString));
+    });
+  }
 
   void savePreviousSearches() async {
     final prefs = await SharedPreferences.getInstance();
@@ -66,6 +81,8 @@ class _RecipeListState extends State<RecipeList> {
 
     getPreviousSearches();
 
+    loadRecipes();
+
     textEditingController = TextEditingController(text: '');
 
     _scrollController.addListener(() {
@@ -101,6 +118,24 @@ class _RecipeListState extends State<RecipeList> {
             _buildRecipeLoader(context),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildRecipeCard(
+      BuildContext topLevelContext, List<APIHits> hits, int index) {
+    final recipe = hits[index].recipe;
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+            topLevelContext,
+            MaterialPageRoute(
+              builder: (context) => const RecipeDetails(),
+            ));
+      },
+      child: recipeStringCard(
+        recipe.image,
+        recipe.label,
       ),
     );
   }
@@ -189,11 +224,16 @@ class _RecipeListState extends State<RecipeList> {
   }
 
   Widget _buildRecipeLoader(BuildContext context) {
-    if (textEditingController.text.length < 3) {
+    if (_apiRecipeQuery == null || _apiRecipeQuery?.hits == null) {
       return Container();
     }
-    return const Center(
-      child: CircularProgressIndicator(),
+    return Flexible(
+      child: ListView.builder(
+        itemCount: 1,
+        itemBuilder: (BuildContext context, int index) => Center(
+          child: _buildRecipeCard(context, _apiRecipeQuery!.hits, 0),
+        ),
+      ),
     );
   }
 }
