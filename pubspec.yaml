@@ -41,6 +41,7 @@ dependencies:
   flutter_svg:
   shared_preferences:
   json_annotation:
+  http: 
 
 
 dev_dependencies:

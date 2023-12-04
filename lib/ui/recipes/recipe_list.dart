@@ -11,6 +11,8 @@ import '../../network/recipe_model.dart';
 import '../widgets/recipe_card.dart';
 import '../../ui/recipes/recipe_details.dart';
 
+import '../../network/recipe_service.dart';
+
 class RecipeList extends StatefulWidget {
   const RecipeList({super.key});
 
@@ -21,7 +23,7 @@ class RecipeList extends StatefulWidget {
 class _RecipeListState extends State<RecipeList> {
   late TextEditingController textEditingController;
   final ScrollController _scrollController = ScrollController();
-  List currentSearchList = [];
+  List<APIHits> currentSearchList = [];
   int currentCount = 0;
   int currentStartPosition = 0;
   int currentEndPosition = 20;
@@ -32,15 +34,6 @@ class _RecipeListState extends State<RecipeList> {
 
   static const String prefSearchKey = 'previousSearches';
   List<String> previousSearches = <String>[];
-
-  APIRecipeQuery? _apiRecipeQuery;
-
-  Future loadRecipes() async {
-    final jsonString = await rootBundle.loadString('assets/recipes1.json');
-    setState(() {
-      _apiRecipeQuery = APIRecipeQuery.fromJson(jsonDecode(jsonString));
-    });
-  }
 
   void savePreviousSearches() async {
     final prefs = await SharedPreferences.getInstance();
@@ -75,13 +68,17 @@ class _RecipeListState extends State<RecipeList> {
     });
   }
 
+  Future<APIRecipeQuery> getRecipeData(String query, int from, int to) async {
+    final recipeJson = await RecipeService().getRecipes(query, from, to);
+    final recipeMap = json.decode(recipeJson);
+    return APIRecipeQuery.fromJson(recipeMap);
+  }
+
   @override
   void initState() {
     super.initState();
 
     getPreviousSearches();
-
-    loadRecipes();
 
     textEditingController = TextEditingController(text: '');
 
@@ -122,6 +119,25 @@ class _RecipeListState extends State<RecipeList> {
     );
   }
 
+  Widget _buildRecipeList(BuildContext recipeListContext, List<APIHits> hits) {
+    final size = MediaQuery.of(context).size;
+    const itemHeight = 310;
+    final itemWidth = size.width / 2;
+    return Flexible(
+      child: GridView.builder(
+        controller: _scrollController,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: (itemWidth / itemHeight),
+        ),
+        itemCount: hits.length,
+        itemBuilder: (BuildContext context, int index) {
+          return _buildRecipeCard(context, hits, index);
+        },
+      ),
+    );
+  }
+
   Widget _buildRecipeCard(
       BuildContext topLevelContext, List<APIHits> hits, int index) {
     final recipe = hits[index].recipe;
@@ -133,10 +149,7 @@ class _RecipeListState extends State<RecipeList> {
               builder: (context) => const RecipeDetails(),
             ));
       },
-      child: recipeStringCard(
-        recipe.image,
-        recipe.label,
-      ),
+      child: recipeCard(recipe),
     );
   }
 
@@ -224,16 +237,48 @@ class _RecipeListState extends State<RecipeList> {
   }
 
   Widget _buildRecipeLoader(BuildContext context) {
-    if (_apiRecipeQuery == null || _apiRecipeQuery?.hits == null) {
+    if (textEditingController.text.length < 3) {
       return Container();
     }
-    return Flexible(
-      child: ListView.builder(
-        itemCount: 1,
-        itemBuilder: (BuildContext context, int index) => Center(
-          child: _buildRecipeCard(context, _apiRecipeQuery!.hits, 0),
-        ),
+    return FutureBuilder<APIRecipeQuery>(
+      future: getRecipeData(
+        textEditingController.text.trim(),
+        currentStartPosition,
+        currentEndPosition,
       ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                snapshot.error.toString(),
+                textAlign: TextAlign.center,
+                textScaleFactor: 1.3,
+              ),
+            );
+          }
+          loading = false;
+          final query = snapshot.data;
+          inErrorState = false;
+          if (query != null) {
+            currentCount = query.count;
+            hasMore = query.more;
+            currentSearchList.addAll(query.hits);
+            if (query.to < currentEndPosition) {
+              currentEndPosition = query.to;
+            }
+          }
+          return _buildRecipeList(context, currentSearchList);
+        } else {
+          if (currentCount == 0) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          } else {
+            return _buildRecipeList(context, currentSearchList);
+          }
+        }
+      },
     );
   }
 }
