@@ -41,7 +41,9 @@ dependencies:
   flutter_svg:
   shared_preferences:
   json_annotation:
-  http: 
+  http:
+  chopper:
+  logging:
 
 
 dev_dependencies:
@@ -49,6 +51,7 @@ dev_dependencies:
     sdk: flutter
   build_runner:
   json_serializable:
+  chopper_generator:
   flutter_lints: ^2.0.0
 
 
