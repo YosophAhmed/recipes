@@ -36,6 +36,7 @@ class ModelConverter implements Converter {
         return response.copyWith<BodyType>(
             body: Error(Exception(mapData['status'])) as BodyType);
       }
+
       final recipeQuery = APIRecipeQuery.fromJson(mapData);
       return response.copyWith<BodyType>(
           body: Success(recipeQuery) as BodyType);
@@ -49,6 +50,6 @@ class ModelConverter implements Converter {
   @override
   FutureOr<Response<BodyType>> convertResponse<BodyType, InnerType>(
       Response response) {
-    throw UnimplementedError();
+    return decodeJson<BodyType, InnerType>(response);
   }
 }

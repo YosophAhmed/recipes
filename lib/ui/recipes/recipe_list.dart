@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:recipes/network/recipe_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/custom_dropdown.dart';
 import '../colors.dart';
@@ -8,6 +9,10 @@ import '../colors.dart';
 import '../../network/recipe_model.dart';
 import '../widgets/recipe_card.dart';
 import '../../ui/recipes/recipe_details.dart';
+
+import 'package:chopper/chopper.dart';
+import '../../network/model_response.dart';
+import 'dart:collection';
 
 class RecipeList extends StatefulWidget {
   const RecipeList({super.key});
@@ -17,6 +22,8 @@ class RecipeList extends StatefulWidget {
 }
 
 class _RecipeListState extends State<RecipeList> {
+  static const String prefSearchKey = 'previousSearches';
+
   late TextEditingController textEditingController;
   final ScrollController _scrollController = ScrollController();
   List<APIHits> currentSearchList = [];
@@ -27,9 +34,36 @@ class _RecipeListState extends State<RecipeList> {
   bool hasMore = false;
   bool loading = false;
   bool inErrorState = false;
-
-  static const String prefSearchKey = 'previousSearches';
   List<String> previousSearches = <String>[];
+
+  @override
+  void initState() {
+    super.initState();
+
+    getPreviousSearches();
+
+    textEditingController = TextEditingController(text: '');
+
+    _scrollController.addListener(() {
+      final triggerFetchMoreSize =
+          0.7 * _scrollController.position.maxScrollExtent;
+      if (hasMore &&
+          currentEndPosition < currentCount &&
+          !loading &&
+          !inErrorState) {
+        loading = true;
+        currentStartPosition = currentEndPosition;
+        currentEndPosition =
+            min(currentStartPosition + pageCount, currentCount);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    textEditingController.dispose();
+    super.dispose();
+  }
 
   void savePreviousSearches() async {
     final prefs = await SharedPreferences.getInstance();
@@ -71,35 +105,6 @@ class _RecipeListState extends State<RecipeList> {
   // }
 
   @override
-  void initState() {
-    super.initState();
-
-    getPreviousSearches();
-
-    textEditingController = TextEditingController(text: '');
-
-    _scrollController.addListener(() {
-      final triggerFetchMoreSize =
-          0.7 * _scrollController.position.maxScrollExtent;
-      if (hasMore &&
-          currentEndPosition < currentCount &&
-          !loading &&
-          !inErrorState) {
-        loading = true;
-        currentStartPosition = currentEndPosition;
-        currentEndPosition =
-            min(currentStartPosition + pageCount, currentCount);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    textEditingController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
@@ -108,7 +113,7 @@ class _RecipeListState extends State<RecipeList> {
         child: Column(
           children: [
             _buildSearchCard(),
-            // _buildRecipeLoader(context),
+            _buildRecipeLoader(context),
           ],
         ),
       ),
@@ -185,31 +190,31 @@ class _RecipeListState extends State<RecipeList> {
                       onSubmitted: (value) {
                         startSearch(value: textEditingController.text);
                       },
-                      onChanged: (query) {
-                        if (query.length >= 3) {
-                          setState(() {
-                            currentSearchList.clear();
-                            currentCount = 0;
-                            currentStartPosition = 0;
-                            currentEndPosition = pageCount;
-                          });
-                        }
-                      },
+                      // onChanged: (query) {
+                      //   if (query.length >= 3) {
+                      //     setState(() {
+                      //       currentSearchList.clear();
+                      //       currentCount = 0;
+                      //       currentStartPosition = 0;
+                      //       currentEndPosition = pageCount;
+                      //     });
+                      //   }
+                      // },
                     ),
                   ),
-                  PopupMenuButton(
+                  PopupMenuButton<String>(
                     icon: const Icon(
                       Icons.arrow_drop_down,
                       color: lightGrey,
                     ),
-                    onSelected: (value) {
+                    onSelected: (String value) {
                       textEditingController.text = value;
                       startSearch(value: textEditingController.text);
                     },
                     itemBuilder: (BuildContext context) {
                       return previousSearches
-                          .map<CustomDropdownMenuItem>((value) {
-                        return CustomDropdownMenuItem(
+                          .map<CustomDropdownMenuItem<String>>((String value) {
+                        return CustomDropdownMenuItem<String>(
                           text: value,
                           value: value,
                           callback: () {
@@ -232,49 +237,78 @@ class _RecipeListState extends State<RecipeList> {
     );
   }
 
-  // Widget _buildRecipeLoader(BuildContext context) {
-  //   if (textEditingController.text.length < 3) {
-  //     return Container();
-  //   }
-  //   return FutureBuilder<APIRecipeQuery>(
-  //     future: getRecipeData(
-  //       textEditingController.text.trim(),
-  //       currentStartPosition,
-  //       currentEndPosition,
-  //     ),
-  //     builder: (context, snapshot) {
-  //       if (snapshot.connectionState == ConnectionState.done) {
-  //         if (snapshot.hasError) {
-  //           return Center(
-  //             child: Text(
-  //               snapshot.error.toString(),
-  //               textAlign: TextAlign.center,
-  //               textScaleFactor: 1.3,
-  //             ),
-  //           );
-  //         }
-  //         loading = false;
-  //         final query = snapshot.data;
-  //         inErrorState = false;
-  //         if (query != null) {
-  //           currentCount = query.count;
-  //           hasMore = query.more;
-  //           currentSearchList.addAll(query.hits);
-  //           if (query.to < currentEndPosition) {
-  //             currentEndPosition = query.to;
-  //           }
-  //         }
-  //         return _buildRecipeList(context, currentSearchList);
-  //       } else {
-  //         if (currentCount == 0) {
-  //           return const Center(
-  //             child: CircularProgressIndicator(),
-  //           );
-  //         } else {
-  //           return _buildRecipeList(context, currentSearchList);
-  //         }
-  //       }
-  //     },
-  //   );
-  // }
+  Widget _buildRecipeLoader(BuildContext context) {
+    if (textEditingController.text.length < 3) {
+      return Container();
+    }
+    return FutureBuilder<Response<Result<APIRecipeQuery>>>(
+      future: RecipeService.create().queryRecipes(
+        textEditingController.text.trim(),
+        currentStartPosition,
+        currentEndPosition,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                snapshot.error.toString(),
+                textAlign: TextAlign.center,
+                textScaleFactor: 1.3,
+              ),
+            );
+          }
+
+          loading = false;
+
+          if (snapshot.data?.isSuccessful == false) {
+            var errorMessage = 'Problems getting data';
+            if (snapshot.data?.error != null &&
+                snapshot.data?.error is LinkedHashMap) {
+              final map = snapshot.data?.error as LinkedHashMap;
+              errorMessage = map['message'];
+            }
+            return Center(
+              child: Text(
+                errorMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 18.0),
+              ),
+            );
+          }
+
+          final result = snapshot.data?.body;
+
+          if (result == null || result is Error) {
+            inErrorState = true;
+            return _buildRecipeList(context, currentSearchList);
+          }
+
+          final query = (result as Success).value;
+          inErrorState = false;
+
+          if (query != null) {
+            currentCount = query.count;
+            hasMore = query.more;
+            currentSearchList.addAll(query.hits);
+
+            if (query.to < currentEndPosition) {
+              currentEndPosition = query.to;
+            }
+
+          }
+
+          return _buildRecipeList(context, currentSearchList);
+        } else {
+          if (currentCount == 0) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          } else {
+            return _buildRecipeList(context, currentSearchList);
+          }
+        }
+      },
+    );
+  }
 }

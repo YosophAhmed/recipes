@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-class CustomDropdownMenuItem extends PopupMenuEntry {
+class CustomDropdownMenuItem<T> extends PopupMenuEntry<T> {
   final dynamic value;
   final String text;
   final Function? callback;
@@ -17,7 +17,7 @@ class CustomDropdownMenuItem extends PopupMenuEntry {
   State<CustomDropdownMenuItem> createState() => _CustomDropdownMEnuItemState();
 
   @override
-  double get height => 32;
+  double get height => 32.0;
 
   @override
   bool represents(value) {
@@ -25,7 +25,7 @@ class CustomDropdownMenuItem extends PopupMenuEntry {
   }
 }
 
-class _CustomDropdownMEnuItemState extends State<CustomDropdownMenuItem> {
+class _CustomDropdownMEnuItemState<T> extends State<CustomDropdownMenuItem<T>> {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
@@ -34,7 +34,7 @@ class _CustomDropdownMEnuItemState extends State<CustomDropdownMenuItem> {
       ),
       child: InkWell(
         onTap: () {
-          Navigator.pop(widget.value);
+          Navigator.of(context).pop<T>(widget.value);
         },
         child: Container(
           constraints: const BoxConstraints(minWidth: 30.0),
@@ -52,7 +52,7 @@ class _CustomDropdownMEnuItemState extends State<CustomDropdownMenuItem> {
               trailing: GestureDetector(
                 onTap: () {
                   if (widget.callback != null) {
-                    widget.callback;
+                    widget.callback!();
                   }
                 },
                 child: SvgPicture.asset(
