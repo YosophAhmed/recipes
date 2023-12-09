@@ -44,6 +44,8 @@ dependencies:
   http:
   chopper:
   logging:
+  provider:
+  equatable: 
 
 
 dev_dependencies:
