@@ -1,18 +1,17 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:recipes/network/recipe_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/custom_dropdown.dart';
 import '../colors.dart';
-
 import '../../network/recipe_model.dart';
 import '../widgets/recipe_card.dart';
 import '../../ui/recipes/recipe_details.dart';
-
+import '../../data/models/models.dart';
 import 'package:chopper/chopper.dart';
 import '../../network/model_response.dart';
 import 'dart:collection';
+import '../../mock_service/mock_service.dart';
+import 'package:provider/provider.dart';
 
 class RecipeList extends StatefulWidget {
   const RecipeList({super.key});
@@ -98,12 +97,6 @@ class _RecipeListState extends State<RecipeList> {
     });
   }
 
-  // Future<APIRecipeQuery> getRecipeData(String query, int from, int to) async {
-  //   final recipeJson = await RecipeService().getRecipes(query, from, to);
-  //   final recipeMap = json.decode(recipeJson);
-  //   return APIRecipeQuery.fromJson(recipeMap);
-  // }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -120,7 +113,10 @@ class _RecipeListState extends State<RecipeList> {
     );
   }
 
-  Widget _buildRecipeList(BuildContext recipeListContext, List<APIHits> hits) {
+  Widget _buildRecipeList(
+    BuildContext recipeListContext,
+    List<APIHits> hits,
+  ) {
     final size = MediaQuery.of(context).size;
     const itemHeight = 310;
     final itemWidth = size.width / 2;
@@ -132,23 +128,47 @@ class _RecipeListState extends State<RecipeList> {
           childAspectRatio: (itemWidth / itemHeight),
         ),
         itemCount: hits.length,
-        itemBuilder: (BuildContext context, int index) {
-          return _buildRecipeCard(context, hits, index);
+        itemBuilder: (
+          BuildContext context,
+          int index,
+        ) {
+          return _buildRecipeCard(
+            context,
+            hits,
+            index,
+          );
         },
       ),
     );
   }
 
   Widget _buildRecipeCard(
-      BuildContext topLevelContext, List<APIHits> hits, int index) {
+    BuildContext topLevelContext,
+    List<APIHits> hits,
+    int index,
+  ) {
     final recipe = hits[index].recipe;
     return GestureDetector(
       onTap: () {
         Navigator.push(
-            topLevelContext,
-            MaterialPageRoute(
-              builder: (context) => const RecipeDetails(),
-            ));
+          topLevelContext,
+          MaterialPageRoute(
+            builder: (context) {
+              final detailRecipe = Recipe(
+                label: recipe.label,
+                image: recipe.image,
+                url: recipe.url,
+                calories: recipe.calories,
+                totalTime: recipe.totalTime,
+                totalWeight: recipe.totalWeight,
+              );
+              detailRecipe.ingredients = convertIngredients(recipe.ingredients);
+              return RecipeDetails(
+                recipe: detailRecipe,
+              );
+            },
+          ),
+        );
       },
       child: recipeCard(recipe),
     );
@@ -242,7 +262,7 @@ class _RecipeListState extends State<RecipeList> {
       return Container();
     }
     return FutureBuilder<Response<Result<APIRecipeQuery>>>(
-      future: RecipeService.create().queryRecipes(
+      future: Provider.of<MockService>(context).queryRecipes(
         textEditingController.text.trim(),
         currentStartPosition,
         currentEndPosition,
@@ -295,7 +315,6 @@ class _RecipeListState extends State<RecipeList> {
             if (query.to < currentEndPosition) {
               currentEndPosition = query.to;
             }
-
           }
 
           return _buildRecipeList(context, currentSearchList);

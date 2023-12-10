@@ -9,50 +9,82 @@ class MemoryRepository extends Repository with ChangeNotifier {
   final List<Ingredient> _currentIngredients = <Ingredient>[];
 
   @override
-  void close() {}
-
-  @override
   void deleteIngredient(Ingredient ingredient) {
-    // TODO: implement deleteIngredient
+    _currentIngredients.remove(ingredient);
   }
 
   @override
   void deleteIngredients(List<Ingredient> ingredients) {
-    // TODO: implement deleteIngredients
+    _currentIngredients.removeWhere(
+      (ingredient) => ingredients.contains(ingredient),
+    );
+    notifyListeners();
   }
 
   @override
   void deleteRecipe(Recipe recipe) {
-    // TODO: implement deleteRecipe
+    _currentRecipes.remove(recipe);
+    if (recipe.id != null) {
+      deleteRecipeIngredients(recipe.id!);
+    }
+    notifyListeners();
   }
 
   @override
   void deleteRecipeIngredients(int recipeId) {
-    // TODO: implement deleteRecipeIngredients
+    _currentIngredients.removeWhere(
+      (ingredient) => ingredient.recipeId == recipeId,
+    );
+    notifyListeners();
   }
 
   @override
   List<Ingredient> findAllIngredients() {
-    // TODO: implement findAllIngredients
-    throw UnimplementedError();
+    return _currentIngredients;
   }
 
   @override
   List<Recipe> findAllRecipes() {
-    // TODO: implement findAllRecipes
-    throw UnimplementedError();
+    return _currentRecipes;
   }
 
   @override
   Recipe findRecipeById(int id) {
-    // TODO: implement findRecipeById
-    throw UnimplementedError();
+    return _currentRecipes.firstWhere(
+      (recipe) => recipe.id == id,
+    );
   }
 
   @override
   List<Ingredient> findRecipeIngredients(int recipeId) {
-    // TODO: implement findRecipeIngredients
-    throw UnimplementedError();
+    final recipe = findRecipeById(recipeId);
+
+    final recipeIngredients = _currentIngredients
+        .where(
+          (ingredient) => ingredient.recipeId == recipe.id,
+        )
+        .toList();
+
+    return recipeIngredients;
+  }
+
+  @override
+  List<int> insertIngredients(List<Ingredient> ingredients) {
+    if (ingredients.isNotEmpty) {
+      _currentIngredients.addAll(ingredients);
+      notifyListeners();
+    }
+    return <int>[];
+  }
+
+  @override
+  int insertRecipe(Recipe recipe) {
+    _currentRecipes.add(recipe);
+    if (recipe.ingredients != null) {
+      insertIngredients(recipe.ingredients!);
+    }
+    notifyListeners();
+    return 0;
   }
 
   @override
@@ -61,14 +93,5 @@ class MemoryRepository extends Repository with ChangeNotifier {
   }
 
   @override
-  List<int> insertIngredients(List<Ingredient> ingredients) {
-    // TODO: implement insertIngredients
-    throw UnimplementedError();
-  }
-
-  @override
-  int insertRecipe(Recipe recipe) {
-    // TODO: implement insertRecipe
-    throw UnimplementedError();
-  }
+  void close() {}
 }

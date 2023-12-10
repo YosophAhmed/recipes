@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:recipes/ui/recipes/my_recipes_list.dart';
+import 'package:recipes/ui/recipes/recipe_details.dart';
+import 'package:recipes/ui/shopping/shopping_list.dart';
 import 'colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -22,8 +25,10 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    getCurrentIndex();
     pageList.add(const RecipeList());
+    pageList.add(const MyRecipesList());
+    pageList.add(const ShoppingList());
+    getCurrentIndex();
   }
 
   void saveCurrentIndex() async {
