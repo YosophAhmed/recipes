@@ -3,8 +3,10 @@ import 'package:recipes/data/memory_repository.dart';
 import 'package:recipes/ui/main_screen.dart';
 import 'dart:developer';
 import 'package:logging/logging.dart';
-import 'mock_service/mock_service.dart';
 import 'package:provider/provider.dart';
+import 'data/repository.dart';
+import 'network/recipe_service.dart';
+import 'network/service_interface.dart';
 
 void main() {
   _setupLogging();
@@ -18,13 +20,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<MemoryRepository>(
+        Provider<Repository>(
           lazy: false,
           create: (_) => MemoryRepository(),
         ),
-        Provider(
+        Provider<ServiceInterface>(
           lazy: false,
-          create: (_) => MockService()..create(),
+          create: (_) => RecipeService.create(),
         ),
       ],
       child: MaterialApp(

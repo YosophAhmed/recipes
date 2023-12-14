@@ -5,7 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../../network/recipe_model.dart';
 import '../../data/models/models.dart';
-import '../../data/memory_repository.dart';
+import '../../data/repository.dart';
 
 class RecipeDetails extends StatelessWidget {
   final Recipe recipe;
@@ -17,7 +17,7 @@ class RecipeDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final repository = Provider.of<MemoryRepository>(context);
+    final repository = Provider.of<Repository>(context);
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -30,14 +30,6 @@ class RecipeDetails extends StatelessWidget {
               children: <Widget>[
                 Stack(
                   children: [
-                    // Align(
-                    //   alignment: Alignment.topCenter,
-                    //   child: Image.asset(
-                    //     'assets/images/pizza_w700.png',
-                    //     height: 200,
-                    //     width: 200,
-                    //   ),
-                    // ),
                     Align(
                       alignment: Alignment.topLeft,
                       child: CachedNetworkImage(

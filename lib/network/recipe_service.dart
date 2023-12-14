@@ -2,15 +2,18 @@ import 'package:chopper/chopper.dart';
 import 'package:recipes/network/model_converter.dart';
 import 'recipe_model.dart';
 import 'model_response.dart';
-
+import 'service_interface.dart';
 part 'recipe_service.chopper.dart';
 
-const String apiKey = '';
-const String apiId = '';
+const String apiKey = '04182a523aaf4247e3ddc1f8ad750481';
+const String apiId = 'd27d34fa';
 const String apiUrl = 'https://api.edamam.com';
 
 @ChopperApi()
-abstract class RecipeService extends ChopperService {
+abstract class RecipeService extends ChopperService
+    implements ServiceInterface {
+
+  @override
   @Get(path: 'search')
   Future<Response<Result<APIRecipeQuery>>> queryRecipes(
     @Query('q') String query,
@@ -41,20 +44,3 @@ Request _addQuery(Request request) {
   params['app_key'] = apiKey;
   return request.copyWith(parameters: params);
 }
-
-// class RecipeService {
-//   Future getData(String url) async {
-//     final response = await get(Uri.parse(url));
-//     if (response.statusCode == 200) {
-//       return response.body;
-//     } else {
-//       log(response.body);
-//     }
-//   }
-//
-//   Future<dynamic> getRecipes(String query, int from, int to) async {
-//     final recipeData = await getData(
-//         '$apiUrl?app_id=$apiId&app_key=$apiKey&q=$query&from=$from&to=$to');
-//     return recipeData;
-//   }
-// }
