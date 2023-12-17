@@ -75,4 +75,156 @@ class DatabaseHelper {
     await database;
     return _streamDatabase;
   }
+
+  List<Recipe> parseRecipes(List<Map<String, dynamic>> recipeList) {
+    final recipes = <Recipe>[];
+
+    for (final recipeMap in recipeList) {
+      final recipe = Recipe.fromJson(recipeMap);
+      recipes.add(recipe);
+    }
+
+    return recipes;
+  }
+
+  List<Ingredient> parseIngredients(List<Map<String, dynamic>> ingredientList) {
+    final ingredients = <Ingredient>[];
+
+    for (final ingredientMap in ingredientList) {
+      final ingredient = Ingredient.fromJson(ingredientMap);
+      ingredients.add(ingredient);
+    }
+
+    return ingredients;
+  }
+
+  Stream<List<Recipe>> watchAllRecipes() async* {
+    final db = await instance.streamDatabase;
+
+    yield* db.createQuery(recipeTable).mapToList(
+          (row) => Recipe.fromJson(row),
+        );
+  }
+
+  Stream<List<Ingredient>> watchAllIngredient() async* {
+    final db = await instance.streamDatabase;
+    yield* db.createQuery(ingredientTable).mapToList(
+          (row) => Ingredient.fromJson(row),
+        );
+  }
+
+  Future<List<Recipe>> findAllRecipes() async {
+    final db = await instance.streamDatabase;
+    final recipeList = await db.query(recipeTable);
+    final recipes = parseRecipes(recipeList);
+    return recipes;
+  }
+
+  Future<Recipe> findRecipeById(int id) async {
+    final db = await instance.streamDatabase;
+    final recipesList = await db.query(
+      recipeTable,
+      where: 'id = $id',
+    );
+    final recipes = parseRecipes(recipesList);
+    return recipes.first;
+  }
+
+  Future<List<Ingredient>> findAllIngredients() async {
+    final db = await instance.streamDatabase;
+    final ingredientList = await db.query(ingredientTable);
+    final ingredients = parseIngredients(ingredientList);
+    return ingredients;
+  }
+
+  Future<List<Ingredient>> findRecipeIngredients(int recipeId) async {
+    final db = await instance.streamDatabase;
+    final ingredientList = await db.query(
+      ingredientTable,
+      where: 'recipeId = $recipeId',
+    );
+    final ingredients = parseIngredients(ingredientList);
+    return ingredients;
+  }
+
+  Future<int> insert(String table, Map<String, dynamic> row) async {
+    final db = await instance.streamDatabase;
+    return db.insert(
+      table,
+      row,
+    );
+  }
+
+  Future<int> insertRecipe(Recipe recipe) async {
+    return insert(
+      recipeTable,
+      recipe.toJson(),
+    );
+  }
+
+  Future<int> insertIngredient(Ingredient ingredient) async {
+    return insert(
+      ingredientTable,
+      ingredient.toJson(),
+    );
+  }
+
+  Future<int> _delete(String table, String columnId, int id) async {
+    final db = await instance.streamDatabase;
+    return db.delete(
+      table,
+      where: '$columnId = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteRecipe(Recipe recipe) async {
+    if (recipe.id != null) {
+      return _delete(
+        recipeTable,
+        recipeId,
+        recipe.id!,
+      );
+    } else {
+      return Future.value(-1);
+    }
+  }
+
+  Future<int> deleteIngredient(Ingredient ingredient) async {
+    if (ingredient.id != null) {
+      return _delete(
+        ingredientTable,
+        ingredientID,
+        ingredient.id!,
+      );
+    } else {
+      return Future.value(-1);
+    }
+  }
+
+  Future<void> deleteIngredients(List<Ingredient> ingredients) async {
+    for (final ingredient in ingredients) {
+      if (ingredient.id != null) {
+        _delete(
+          ingredientTable,
+          ingredientID,
+          ingredient.id!,
+        );
+      }
+    }
+    return Future.value();
+  }
+
+  Future<int> deleteRecipeIngredients(int id) async {
+    final db = await instance.streamDatabase;
+    return db.delete(
+      ingredientTable,
+      where: '$recipeId = ?',
+      whereArgs: [id],
+    );
+  }
+
+  void close() {
+    _streamDatabase.close();
+  }
 }
