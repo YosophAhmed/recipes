@@ -32,7 +32,7 @@ class DatabaseHelper {
     url TEXT,
     calories REAL,
     totalWeight REAL,
-    totalTime REAL,
+    totalTime REAL
     )
     ''');
 
@@ -41,7 +41,7 @@ class DatabaseHelper {
     $ingredientID INTEGER PRIMARY KEY,
     $recipeId INTEGER,
     name TEXT,
-    weight REAL,
+    weight REAL
     )
     ''');
   }

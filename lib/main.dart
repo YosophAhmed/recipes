@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:recipes/data/memory_repository.dart';
 import 'package:recipes/ui/main_screen.dart';
 import 'dart:developer';
 import 'package:logging/logging.dart';
@@ -7,14 +6,26 @@ import 'package:provider/provider.dart';
 import 'data/repository.dart';
 import 'network/recipe_service.dart';
 import 'network/service_interface.dart';
+import 'data/sqlite/sqlite_repository.dart';
 
-void main() {
+Future<void> main() async {
   _setupLogging();
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  final repository = SqliteRepository();
+  await repository.init();
+  return runApp(
+    MyApp(
+      repository: repository,
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final Repository repository;
+  const MyApp({
+    super.key,
+    required this.repository,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +33,8 @@ class MyApp extends StatelessWidget {
       providers: [
         Provider<Repository>(
           lazy: false,
-          create: (_) => MemoryRepository(),
+          create: (_) => repository,
+          dispose: (_, Repository repository) => repository.close(),
         ),
         Provider<ServiceInterface>(
           lazy: false,
